@@ -1,0 +1,38 @@
+---
+title: "When AWS Went Down: Lessons from the Oct 2025 Outage (A Full-Stack Dev’s View)"
+publishedAt: "2025-10-20T21:00:00Z"
+summary: "A real-time account of the Oct 2025 AWS US-EAST-1 outage and practical resilience lessons for full-stack teams."
+images: []
+tag: "AWS"
+image: "https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg"
+---
+
+On October 20, 2025, a major AWS outage took down large chunks of the internet. As a full-stack dev on call that day, I watched it unfold in real time—from early signs of trouble to a day of chaos and recovery.
+
+## The Early Signs
+
+Our monitoring lit up around midnight: API failures, deployment hangs, and database timeouts—especially on DynamoDB. We assumed a bad deploy. But with no recent changes and CloudWatch showing huge error spikes, we realized something bigger was happening.
+
+AWS’s status page said all green (not helpful), but developer Twitter and Downdetector were buzzing. Thousands of services—from Snapchat to banking apps—were down. We suspected a regional AWS failure, and that’s exactly what it was.
+
+## The Root Cause
+
+AWS’s US-EAST-1 region (N. Virginia) suffered a DNS failure due to an internal EC2 network subsystem glitch. This broke routing to DynamoDB, causing cascading outages in Lambda, EC2, and more. Even AWS support tools were affected. It wasn’t a cyberattack—just an internal failure with a massive blast radius.
+
+## Recovery
+
+AWS patched DNS by ~2:24 AM PDT, but issues lingered for hours. Our team stayed in a virtual war room triaging issues, communicating with users, and watching AWS slowly restore services. Some apps recovered quickly, others lagged. Our own systems stabilized by late afternoon.
+
+## Key Lessons
+
+- Avoid single-region risk: US-EAST-1 is the default for many AWS services. Don’t rely on it exclusively. Use multi-region backups or failover plans.
+- Map your dependencies: Even services outside the affected region had issues due to IAM or global tables tied to N. Virginia.
+- Don’t trust the status page alone: Monitor externally. Social media and synthetic checks gave us faster signals.
+- Practice incident response: Knowing who does what—and how to communicate with customers—made a huge difference.
+- Build for degradation: Cache critical data. Plan for read-only or minimal fallback experiences.
+
+## Final Thoughts
+
+This outage was a wake-up call. Even the best infrastructure can fail. As builders on the cloud, we need to architect for resilience, not just convenience. If your app relies on AWS (or any provider), assume outages will happen—because they will.
+
+The internet survived. So did we. But next time, we’ll be even more ready.

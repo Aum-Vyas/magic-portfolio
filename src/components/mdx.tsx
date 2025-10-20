@@ -1,4 +1,5 @@
 import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
+import AsciiBeforeAfter from "@/components/work/AsciiBeforeAfter";
 import React, { ReactNode } from "react";
 import { slugify as transliterate } from "transliteration";
 
@@ -202,6 +203,7 @@ const components = {
   Icon,
   Media,
   SmartLink,
+  AsciiBeforeAfter,
 };
 
 type CustomMDXProps = MDXRemoteProps & {

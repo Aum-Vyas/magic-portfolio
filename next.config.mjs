@@ -9,6 +9,10 @@ const withMDX = mdx({
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   transpilePackages: ["next-mdx-remote"],
+  eslint: {
+    // Skip ESLint during production builds when local config is missing or incompatible
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {

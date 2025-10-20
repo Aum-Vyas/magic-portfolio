@@ -1,0 +1,340 @@
+---
+title: "My 5‑Pi Kubernetes Cluster — Full Homelab Guide"
+publishedAt: "2025-10-20T10:10:00Z"
+summary: "From bare metal to services: Ubuntu on Raspberry Pi, kubeadm, Cilium, MetalLB, Traefik, persistent storage, monitoring, backups, and hardening."
+images: []
+tag: "Homelab"
+---
+
+## Prerequisites
+
+- Hardware
+  - 5× Raspberry Pi 4/5 (recommended 4–8 GB RAM)
+  - microSD cards ≥ 16 GB for boot; USB SSDs for rootfs (recommended)
+  - PoE HATs or quality USB‑C PSUs; Cat5e/6 cables; switch (managed preferred)
+- Admin workstation
+  - Linux/macOS/WSL with `ssh`
+  - `kubectl` ≥ 1.30, `helm` ≥ 3.14, `cilium-cli` ≥ 0.15
+  - Optional: `k9s`, `yq`, `jq`
+- Network
+  - IPv4 LAN (example used: `192.168.10.0/24`)
+  - Router/DHCP reservations for `pi‑[1..5]` and a free LB range (e.g., `192.168.10.240–250`)
+  - Outbound internet to pull images/charts; inbound TCP 80/443 to the MetalLB IP if you want external access
+- Access
+  - Sudo on each Pi, ability to write images to microSD, and physical access for first boot
+
+## Hardware & Network Plan
+
+- 5× Raspberry Pi 4/5 (4–8 GB RAM), PoE HATs or USB‑C PSUs
+- 1× Managed switch + VLANs (optional but recommended)
+- microSD (boot) + USB SSDs (for reliability)
+- Router/DHCP with static leases: `pi-[1..5]` → `192.168.10.2–6`
+
+### Topology Diagram
+
+<svg viewBox="0 0 920 420" role="img" aria-label="Raspberry Pi Kubernetes cluster topology" style={{width:'100%', maxWidth:920}}>
+  <defs>
+    <style>
+      {`.box{fill:transparent;stroke:currentColor;stroke-width:2;rx:8;}
+        .label{font: 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; fill: currentColor;}
+        .arrow{stroke:currentColor;stroke-width:2;marker-end:url(#a);} `}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="currentColor" />
+    </marker>
+  </defs>
+  <rect class="box" x="20" y="30" width="160" height="60" />
+  <text class="label" x="100" y="65" text-anchor="middle">Internet</text>
+
+  <rect class="box" x="210" y="30" width="180" height="60" />
+  <text class="label" x="300" y="65" text-anchor="middle">Router / DHCP</text>
+  <line class="arrow" x1="180" y1="60" x2="210" y2="60" />
+
+  <rect class="box" x="420" y="30" width="160" height="60" />
+  <text class="label" x="500" y="65" text-anchor="middle">Managed Switch</text>
+  <line class="arrow" x1="390" y1="60" x2="420" y2="60" />
+
+  <rect class="box" x="40" y="140" width="190" height="60" />
+  <text class="label" x="135" y="175" text-anchor="middle">NFS / NAS</text>
+  <line class="arrow" x1="230" y1="170" x2="420" y2="80" />
+
+  <g>
+    <rect class="box" x="420" y="140" width="150" height="60" />
+    <text class="label" x="495" y="165" text-anchor="middle">pi‑1</text>
+    <text class="label" x="495" y="185" text-anchor="middle">Control Plane</text>
+  </g>
+  <g>
+    <rect class="box" x="590" y="140" width="150" height="60" />
+    <text class="label" x="665" y="175" text-anchor="middle">pi‑2</text>
+  </g>
+  <g>
+    <rect class="box" x="760" y="140" width="150" height="60" />
+    <text class="label" x="835" y="175" text-anchor="middle">pi‑3</text>
+  </g>
+  <g>
+    <rect class="box" x="590" y="220" width="150" height="60" />
+    <text class="label" x="665" y="255" text-anchor="middle">pi‑4</text>
+  </g>
+  <g>
+    <rect class="box" x="760" y="220" width="150" height="60" />
+    <text class="label" x="835" y="255" text-anchor="middle">pi‑5</text>
+  </g>
+  <text class="label" x="495" y="120" text-anchor="middle">Cilium</text>
+  <text class="label" x="665" y="120" text-anchor="middle">MetalLB</text>
+  <text class="label" x="835" y="120" text-anchor="middle">Traefik</text>
+  <line class="arrow" x1="500" y1="90" x2="495" y2="140" />
+  <line class="arrow" x1="500" y1="90" x2="665" y2="140" />
+  <line class="arrow" x1="500" y1="90" x2="835" y2="140" />
+</svg>
+
+## OS & Base Config (per-node)
+
+I use Ubuntu Server 24.04 LTS (aarch64).
+
+```bash
+# Set hostname, static IP via DHCP reservation, update
+sudo hostnamectl set-hostname pi-1
+sudo apt update && sudo apt -y full-upgrade
+
+# Disable swap (k8s requirement)
+sudo sed -i.bak '/ swap / s/^/#/' /etc/fstab
+sudo swapoff -a
+
+# Container runtime: containerd
+sudo apt -y install containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+sudo systemctl enable --now containerd
+
+# Kernel params for k8s networking
+cat <<'SYS' | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+SYS
+
+cat <<'SYS' | sudo tee /etc/sysctl.d/99-k8s.conf
+net.bridge.bridge-nf-call-iptables=1
+net.ipv4.ip_forward=1
+net.bridge.bridge-nf-call-ip6tables=1
+SYS
+sudo sysctl --system
+```
+
+## Install Kubernetes (kubeadm)
+
+```bash
+sudo apt-get -y install apt-transport-https ca-certificates curl
+sudo curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt update && sudo apt -y install kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+On `pi-1` (control plane):
+
+```bash
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.10.2
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+Save the join command output and run it on the other Pis.
+
+## CNI: Cilium (eBPF)
+
+```bash
+curl -L --remote-name https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-arm64.tar.gz
+sudo tar xzf cilium-linux-arm64.tar.gz -C /usr/local/bin
+cilium install --version 1.15.6
+cilium status --wait
+```
+
+## Load Balancer: MetalLB
+
+Pick an unused IP range, e.g., `192.168.10.240-192.168.10.250`.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
+cat <<EOF | kubectl apply -f -
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata: {name: home-pool, namespace: metallb-system}
+spec:
+  addresses: ["192.168.10.240-192.168.10.250"]
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata: {name: l2, namespace: metallb-system}
+spec: {}
+EOF
+```
+
+## Ingress: Traefik
+
+```bash
+helm repo add traefik https://traefik.github.io/charts
+helm install traefik traefik/traefik --namespace traefik --create-namespace \
+  --set service.spec.loadBalancerIP=192.168.10.240
+```
+
+## Storage Options
+
+- Fastest: per‑node SSDs + Rook‑Ceph (heavy for Pis)
+- Simple: NFS server on NAS; use `nfs-subdir-external-provisioner`
+
+```bash
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+helm install nfs nfs-subdir-external-provisioner/nfs-subdir-external-provisioner -n storage --create-namespace \
+  --set nfs.server=192.168.10.50 --set nfs.path=/export/k8s
+```
+
+Set it as default storage class.
+
+```bash
+kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+```
+
+## Monitoring & Logging
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install kps prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+
+helm repo add grafana https://grafana.github.io/helm-charts
+helm install loki grafana/loki -n logging --create-namespace
+helm install promtail grafana/promtail -n logging --set "loki.serviceName=loki"
+```
+
+## Sample App with Ingress
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: whoami }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: whoami } }
+  template:
+    metadata: { labels: { app: whoami } }
+    spec:
+      containers:
+      - name: whoami
+        image: containous/whoami
+        ports: [{ containerPort: 80 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: whoami }
+spec:
+  selector: { app: whoami }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: { name: whoami }
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: whoami.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service: { name: whoami, port: { number: 80 } }
+```
+
+## Backups
+
+- `velero` for cluster resources + NFS snapshots
+- Regular `etcdctl snapshot` on control plane
+
+## Hardening
+
+- Enable Cilium NetworkPolicies, restrict namespaces
+- Use read‑only root filesystems for apps
+- Keep nodes patched; audit with `kube-bench`
+
+---
+
+This setup is power-efficient and resilient-perfect for a homelab you can iterate on.
+
+
+## Advanced Topics
+
+### containerd cgroup driver (systemd)
+
+```bash
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+```
+
+### Verify Cluster Health
+
+```bash
+kubectl get nodes -o wide
+kubectl -n kube-system get pods -o wide
+kubectl get storageclass
+```
+
+### DNS and Local Domains
+
+- Use Pi-hole/AdGuard Home to resolve `*.local` to MetalLB IPs.
+- Or add hosts on your workstation: `192.168.10.240 whoami.local`.
+
+### Certificates (cert-manager alternative)
+
+If you prefer cert-manager over Traefik ACME:
+
+```bash
+helm repo add jetstack https://charts.jetstack.io
+helm install cert-manager jetstack/cert-manager -n cert-manager --create-namespace \
+  --set crds.enabled=true
+```
+
+Then create a ClusterIssuer for HTTP-01 or DNS-01.
+
+### Storage Alternatives
+
+- Longhorn (ARM‑friendly, simple UI) — good for Pi SSDs.
+- Rook‑Ceph (heavier, resilient) — needs at least 3 nodes with SSDs.
+
+### Resource Requests & Limits
+
+Always set requests/limits to avoid noisy neighbors:
+
+```yaml
+resources:
+  requests: { cpu: "50m", memory: "64Mi" }
+  limits:   { cpu: "500m", memory: "256Mi" }
+```
+
+### Network Policies (Cilium)
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata: { name: default-deny }
+spec:
+  endpointSelector: {}
+  ingress: []
+  egress: []
+```
+
+Allow only needed namespaces/services explicitly after a default deny.
+
+### Backups (etcd)
+
+```bash
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  snapshot save /var/backups/etcd-$(date +%F).db
+```
+
+### Power & Thermals
+
+- Use PoE HATs or quality PSUs; undervoltage causes weird kubelet issues.
+- Small heatsinks + a 120mm fan across the Pis keeps them cool and quiet.

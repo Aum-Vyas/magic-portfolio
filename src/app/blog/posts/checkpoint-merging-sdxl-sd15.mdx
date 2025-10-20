@@ -1,0 +1,77 @@
+---
+title: "Checkpoint Merging for SDXL and SD1.5 — Practical Guide"
+publishedAt: "2025-10-20T09:40:00Z"
+summary: "How and why to merge Stable Diffusion checkpoints (SDXL, SD1.5): strategies, tools, pitfalls, and evaluation."
+images: []
+tag: "Diffusion"
+---
+
+## Prerequisites
+
+- GPU: NVIDIA with ≥ 8 GB VRAM (12–24 GB recommended for SDXL work)
+- OS/Tooling: Python 3.10+, `pip`, `git`, CUDA toolkit + cuDNN, PyTorch w/ CUDA
+- Storage: 30–100 GB free (base models, LoRAs, merged outputs, VAEs)
+- Models: legal access to SD1.5/SDXL checkpoints, VAEs, and LoRAs you plan to merge
+- Optional UIs: Automatic1111, ComfyUI; CLIs: `sd-scripts`, `kohya_ss`
+
+## Why Merge?
+
+Merging lets you blend styles and capabilities from multiple checkpoints without full retraining. For SDXL and SD1.5, it’s a fast path to specialized looks (e.g., photoreal + anime blend) while keeping performance tight.
+
+## Approaches
+
+1. Weighted sum (simple, deterministic)
+2. Block‑wise merging (per‑layer weights)
+3. LoRA composition (stack adapters and merge into base)
+
+## Tools
+
+- `sd-scripts` and `kohya_ss` for LoRA and merges
+- `sd-webui` A1111 merge tab for quick experiments
+- `comfyui` nodes for reproducible graphs
+
+## Example: Weighted Sum (SD1.5)
+
+```python
+# pip install torch safetensors diffusers
+import torch
+from safetensors.torch import load_file, save_file
+
+ckpt_a = load_file("realisticVision_v51.safetensors")
+ckpt_b = load_file("anythingV5.safetensors")
+
+alpha = 0.35  # 0..1 strength of B
+merged = {k: (1-alpha)*v + alpha*ckpt_b[k] for k, v in ckpt_a.items() if k in ckpt_b}
+save_file(merged, "merged_15_anyreal_v1.safetensors")
+```
+
+## SDXL Notes
+
+- SDXL has base + refiner; merge them consistently or keep refiner original.
+- Watch out for text encoder merges—can alter prompt semantics; often keep text encoders from the base.
+
+## LoRA Composition
+
+- Train small LoRAs for distinct concepts (style, subject) and merge only the ones you need.
+- Normalize scales to avoid overcooking; test at default strengths before burning in.
+
+## Evaluation
+
+- Create a fixed prompt suite (10–20 prompts), stable seeds.
+- Check diversity, artifacts, and prompt adherence at 20–30 steps.
+- Keep a tiny gallery of A/B outputs per prompt for quick review.
+
+## Pitfalls
+
+- Over‑merging (mushy features, loss of identity).
+- Mismatched VAE or text encoders.
+- Forgetting to preserve metadata for reproducibility.
+
+## When to Retrain Instead
+
+- Domain gap is large (medical, technical diagrams).
+- Need strict text rendering or layout.
+
+---
+
+I can publish a ComfyUI graph and prompt suite template if useful.

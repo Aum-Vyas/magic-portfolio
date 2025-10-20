@@ -27,6 +27,14 @@ import {
   SiNextdotjs,
   SiFigma,
   SiSupabase,
+  SiPython,
+  SiOpenjdk,
+  SiReact,
+  SiRust,
+  SiHtml5,
+  SiCss3,
+  SiTensorflow,
+  SiPytorch,
 } from "react-icons/si";
 
 import { FaDiscord, FaGithub, FaLinkedin, FaX, FaThreads, FaXTwitter, FaFacebook, FaPinterest, FaWhatsapp, FaReddit, FaTelegram, } from "react-icons/fa6";
@@ -58,6 +66,15 @@ export const iconLibrary: Record<string, IconType> = {
   nextjs: SiNextdotjs,
   supabase: SiSupabase,
   figma: SiFigma,
+  python: SiPython,
+  // Use OpenJDK icon to represent Java when SiJava is unavailable in this version.
+  java: SiOpenjdk,
+  react: SiReact,
+  rust: SiRust,
+  html5: SiHtml5,
+  css3: SiCss3,
+  tensorflow: SiTensorflow,
+  pytorch: SiPytorch,
   facebook: FaFacebook,
   pinterest: FaPinterest,
   whatsapp: FaWhatsapp,

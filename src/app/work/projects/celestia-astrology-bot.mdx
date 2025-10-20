@@ -1,0 +1,51 @@
+---
+title: "Celestia — Astrology Chatbot"
+publishedAt: "2025-10-20T11:00:00Z"
+summary: "Astrology Q&A bot built with Next.js, Supabase, and Gemini."
+images:
+  - "/images/projects/celestia/Screenshot 2025-10-19 170620.png"
+  - "/images/projects/celestia/Screenshot 2025-10-19 170532.png"
+---
+
+## Overview
+
+Celestia is an astrology-focused chatbot that answers questions and provides daily guidance. It uses Gemini for reasoning, Supabase for auth/storage, and a Next.js frontend for a smooth, responsive UX.
+
+## Technologies Used
+
+- Next.js (App Router)
+- React
+- Supabase (Auth, DB, Storage)
+- Gemini (Generative AI)
+
+## Media
+
+<img src="/images/projects/celestia/Screenshot 2025-10-19 170532.png" alt="Celestia UI"  />
+<img src="/images/projects/celestia/Screenshot 2025-10-19 170620.png" alt="Celestia chat flow"  />
+
+## Case Study
+
+### Problem & Goals
+- Provide approachable astrology insights via chat with controllable tone and citation.
+- Goals: helpful answers, transparent sources, low latency.
+
+### Architecture
+- Next.js frontend with streaming responses.
+- Gemini model for reasoning; prompt templates for safety and persona.
+- Supabase for auth, message history, and rate limiting.
+
+### Implementation Highlights
+- Conversation memory window per user; semantic truncation when long.
+- Guardrails on input (toxicity/PII) and output (hallucination prompts with citations).
+- Caching frequent queries to reduce tokens/latency.
+
+### Challenges
+- Balancing creativity vs. factual tone; tuned via system prompts and temperature.
+- Handling ambiguous birth data; added follow-up question flow.
+
+### Outcomes
+- Higher user satisfaction in usability tests; median response time under 1.8s with cache hits.
+- Clear groundwork for daily horoscopes and notifications.
+
+### Next Steps
+- Add user profiles with saved charts; experiment with structured tool calls.

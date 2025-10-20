@@ -1,0 +1,49 @@
+---
+title: "Tsukuru — Kanban Board"
+publishedAt: "2025-10-20T12:00:00Z"
+summary: "A collaborative Kanban board built with Next.js, React, and Supabase."
+images:
+  - "/images/projects/tsukuru/Screenshot 2025-10-19 172203.png"
+---
+
+## Overview
+
+Tsukuru is a simple, fast Kanban board for organizing tasks across lists. It supports auth, realtime updates, and drag-and-drop interactions.
+
+## Technologies Used
+
+- Next.js
+- React
+- Supabase
+- JavaScript
+
+## Media
+
+<img src="/images/projects/tsukuru/Screenshot 2025-10-19 172203.png" alt="Board view"  />
+
+## Case Study
+
+### Problem & Goals
+- Needed a lightweight, collaborative task board with simple auth and realtime updates.
+- Goals: fast UX, drag-and-drop, multi-list boards, low setup.
+
+### Architecture
+- Next.js (App Router) UI with server actions for CRUD.
+- Supabase for Postgres, Auth, and Realtime channels.
+- Columnar schema: `boards`, `lists`, `cards`, with RLS policies.
+
+### Implementation Highlights
+- Optimistic UI for card create/move; reconcile via realtime updates.
+- Accessible drag-and-drop; keyboard navigation for card moves.
+- Row-level security using user/board membership.
+
+### Challenges
+- Avoiding reorder flicker across clients; solved with stable sort keys and debounced broadcasts.
+- RLS edge cases on shared boards; added explicit membership checks.
+
+### Outcomes
+- Smooth multi-user interactions; minimal latency under realtime traffic.
+- Clear foundation for labels, due dates, and attachments.
+
+### Next Steps
+- Add board sharing links, comments, and activity log.

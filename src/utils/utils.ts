@@ -44,7 +44,13 @@ function readMDXFile(filePath: string) {
     summary: data.summary || "",
     image: data.image || "",
     images: data.images || [],
-    tag: data.tag || [],
+    // Normalize tag to a string for consistent usage across the app
+    tag:
+      typeof data.tag === "string"
+        ? data.tag
+        : Array.isArray(data.tag)
+          ? data.tag.join(", ")
+          : "",
     team: data.team || [],
     link: data.link || "",
   };

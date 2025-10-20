@@ -2,14 +2,14 @@ import { About, Blog, Gallery, Home, Newsletter, Person, Social, Work } from "@/
 import { Line, Logo, Row, Text } from "@once-ui-system/core";
 
 const person: Person = {
-  firstName: "Selene",
-  lastName: "Yu",
-  name: `Selene Yu`,
-  role: "Design Engineer",
+  firstName: "Trushang (Aum)",
+  lastName: "Vyas",
+  name: `Trushang (Aum) Vyas`,
+  role: "Full-Stack Developer & Finance Student",
   avatar: "/images/avatar.jpg",
-  email: "example@gmail.com",
-  location: "Asia/Jakarta", // Expecting the IANA time zone identifier, e.g., 'Europe/Vienna'
-  languages: ["English", "Bahasa"], // optional: Leave the array empty if you don't want to display languages
+  email: "aumvyas89@gmail.com",
+  location: "America/Vancouver", // Expecting the IANA time zone identifier, e.g., 'Europe/Vienna'
+  languages: ["English","French","Hindi", "Gujarati", "Hindi", "Punjabi"], // optional: Leave the array empty if you don't want to display languages
 };
 
 const newsletter: Newsletter = {
@@ -24,7 +24,7 @@ const social: Social = [
   {
     name: "GitHub",
     icon: "github",
-    link: "https://github.com/once-ui-system",
+    link: "https://github.com/Aum-Vyas",
   },
   {
     name: "LinkedIn",
@@ -51,7 +51,7 @@ const home: Home = {
   description: `Portfolio website showcasing my work as a ${person.role}`,
   headline: <>Building bridges between design and code</>,
   featured: {
-    display: true,
+    display: false,
     title: (
       <Row gap="12" vertical="center">
         <strong className="ml-4">Once UI</strong>{" "}
@@ -65,14 +65,8 @@ const home: Home = {
   },
   subline: (
     <>
-      I'm Selene, a design engineer at{" "}
-      <Logo
-        dark
-        icon="/trademarks/wordmark-dark.svg"
-        style={{ display: "inline-flex", top: "0.25em", marginLeft: "-0.25em" }}
-      />
-      , where I craft intuitive
-      <br /> user experiences. After hours, I build my own projects.
+      I'm {person.firstName}, a full-stack developer and finance student.
+      <br /> I build useful products and love learning new technologies.
     </>
   ),
 };
@@ -98,14 +92,14 @@ const about: About = {
     title: "Introduction",
     description: (
       <>
-        Selene is a Jakarta-based design engineer with a passion for transforming complex challenges
-        into simple, elegant design solutions. Her work spans digital interfaces, interactive
-        experiences, and the convergence of design and technology.
+        {person.name} is a {person.role.toLowerCase()} with a passion for turning ideas into
+        reliable, user-focused software. Interests span web applications, backend systems,
+        and the intersection of technology and finance.
       </>
     ),
   },
   work: {
-    display: true, // set to false to hide this section
+    display: false, // hidden per user request
     title: "Work Experience",
     experiences: [
       {
@@ -151,7 +145,7 @@ const about: About = {
     ],
   },
   studies: {
-    display: true, // set to false to hide this section
+    display: false, // hidden per user request
     title: "Studies",
     institutions: [
       {
@@ -169,61 +163,44 @@ const about: About = {
     title: "Technical skills",
     skills: [
       {
-        title: "Figma",
-        description: (
-          <>Able to prototype in Figma with Once UI with unnatural speed.</>
-        ),
+        title: "Languages",
+        description: <>Core programming languages used across projects.</>,
         tags: [
-          {
-            name: "Figma",
-            icon: "figma",
-          },
+          { name: "Python", icon: "python" },
+          { name: "Java", icon: "java" },
+          { name: "JavaScript", icon: "javascript" },
+          { name: "Rust", icon: "rust" },
         ],
-        // optional: leave the array empty if you don't want to display images
-        images: [
-          {
-            src: "/images/projects/project-01/cover-02.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
-          {
-            src: "/images/projects/project-01/cover-03.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
-        ],
+        images: [],
       },
       {
-        title: "Next.js",
-        description: (
-          <>Building next gen apps with Next.js + Once UI + Supabase.</>
-        ),
+        title: "Frontend",
+        description: <>Web UI and app frameworks.</>,
         tags: [
-          {
-            name: "JavaScript",
-            icon: "javascript",
-          },
-          {
-            name: "Next.js",
-            icon: "nextjs",
-          },
-          {
-            name: "Supabase",
-            icon: "supabase",
-          },
+          { name: "React", icon: "react" },
+          { name: "Next.js", icon: "nextjs" },
+          { name: "HTML", icon: "html5" },
+          { name: "CSS", icon: "css3" },
         ],
-        // optional: leave the array empty if you don't want to display images
-        images: [
-          {
-            src: "/images/projects/project-01/cover-04.jpg",
-            alt: "Project image",
-            width: 16,
-            height: 9,
-          },
+        images: [],
+      },
+      {
+        title: "Machine Learning",
+        description: <>Deep learning frameworks and model tooling.</>,
+        tags: [
+          { name: "TensorFlow", icon: "tensorflow" },
+          { name: "PyTorch", icon: "pytorch" },
         ],
-      },  
+        images: [],
+      },
+      {
+        title: "Databases",
+        description: <>Postgres, Auth, and Storage via Supabase.</>,
+        tags: [
+          { name: "Supabase", icon: "supabase" },
+        ],
+        images: [],
+      },
     ],
   },
 };

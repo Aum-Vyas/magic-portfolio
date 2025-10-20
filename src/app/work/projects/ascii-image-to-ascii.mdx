@@ -1,0 +1,50 @@
+---
+title: "Ascii — Image to ASCII Converter"
+publishedAt: "2025-10-20T09:00:00Z"
+summary: "Python tool that transforms images into ASCII art, with a simple UI and video demo."
+images:
+  - "/images/projects/ascii/Screenshot 2025-10-19 174447.png"
+---
+## Overview
+
+Ascii converts images into stylized ASCII art using Python. It supports adjustable resolution and character sets and can export the output as text.
+
+## Technologies Used
+
+- Python
+
+## Media
+
+<img src="/images/projects/ascii/Screenshot 2025-10-19 174447.png" alt="Ascii output example"  />
+
+<video controls src="/images/projects/ascii/Recording 2025-10-19 174352.mp4" style={{ width: "100%", marginTop: 12 }}  />
+
+## Case Study
+
+### Problem & Goals
+- Convert images into readable ASCII art with tunable density and palettes.
+- Goals: simple UI, predictable output width, fast processing.
+
+### Architecture
+- Python pipeline: load image -> grayscale -> block sampling -> char mapping.
+- CLI/UI wrapper; exports to text file.
+
+### Implementation Highlights
+- Character ramp tuned by luminance; optional color ANSI for terminals.
+- Aspect-ratio correction to account for character cell dimensions.
+- Batch mode for folders; progress output for large images.
+
+### Challenges
+- Balancing detail vs. noise; added adaptive sampling and dithering toggle.
+
+### Outcomes
+- Clean output for portraits and logos at small sizes.
+
+### Next Steps
+- Add web UI and live preview; support GIF to ASCII animation.
+
+## Before & After
+
+Drop your original photo at `portfolio/public/images/projects/ascii/IMG_8389.jpg` (or update the path below), and the component renders a live ASCII conversion in the browser.
+
+<AsciiBeforeAfter src="/images/projects/ascii/IMG_8389.jpg" cols={90} />

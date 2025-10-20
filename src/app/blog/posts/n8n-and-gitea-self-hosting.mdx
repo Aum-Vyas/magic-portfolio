@@ -1,0 +1,297 @@
+---
+title: "Self‑Hosting n8n Automations and Gitea — CI/CD, Webhooks, SSO, Backups"
+publishedAt: "2025-10-20T10:30:00Z"
+summary: "Production‑grade n8n + Gitea on a single host with Traefik, Postgres, Redis, S3 backups, and tight integration via webhooks and Actions."
+images: []
+tag: "DevOps"
+---
+
+## Prerequisites
+
+- Host: Linux VM/bare‑metal (2+ vCPU, 4+ GB RAM, 40+ GB disk)
+- DNS: two subdomains pointing to your host, e.g., `git.example.com`, `automation.example.com`
+- Network: open TCP 80/443 (or reverse proxy in front)
+- Docker: Engine ≥ 26 and Compose plugin
+- SMTP: credentials for outbound email (Gitea notifications)
+- S3/Backups: Object storage bucket + access/secret keys (MinIO, B2, S3)
+- Optional SSO: Authelia/Authentik (OIDC/SAML) configured with your domains
+
+## Goals
+
+- Git hosting (Gitea) with Actions‑runner for CI.
+- Automation platform (n8n) for webhooks, schedules, and integrations.
+- TLS, SSO, backups, and a clean Docker Compose.
+
+## Topology
+
+- Traefik (reverse proxy + ACME TLS)
+- Gitea + Postgres
+- n8n + Redis (queue) + S3 (minio/backblaze) backups
+
+### Topology Diagram
+
+<svg viewBox="0 0 900 420" role="img" aria-label="n8n and Gitea self-hosted stack" style={{width:'100%', maxWidth:900}}>
+  <defs>
+    <style>
+      {`.box{fill:transparent;stroke:currentColor;stroke-width:2;rx:8;}
+        .label{font: 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; fill: currentColor;}
+        .arrow{stroke:currentColor;stroke-width:2;marker-end:url(#a);} `}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="currentColor" />
+    </marker>
+  </defs>
+  <rect class="box" x="40" y="40" width="160" height="60" />
+  <text class="label" x="120" y="75" text-anchor="middle">Internet</text>
+  <rect class="box" x="230" y="40" width="200" height="60" />
+  <text class="label" x="330" y="75" text-anchor="middle">Traefik (TLS, Routes)</text>
+  <line class="arrow" x1="200" y1="70" x2="230" y2="70" />
+
+  <rect class="box" x="470" y="20" width="170" height="80" />
+  <text class="label" x="555" y="55" text-anchor="middle">Gitea</text>
+  <rect class="box" x="470" y="120" width="170" height="50" />
+  <text class="label" x="555" y="150" text-anchor="middle">Postgres</text>
+  <line class="arrow" x1="430" y1="70" x2="470" y2="60" />
+  <line class="arrow" x1="555" y1="100" x2="555" y2="120" />
+
+  <rect class="box" x="670" y="20" width="170" height="80" />
+  <text class="label" x="755" y="55" text-anchor="middle">n8n</text>
+  <rect class="box" x="670" y="120" width="170" height="50" />
+  <text class="label" x="755" y="150" text-anchor="middle">Redis</text>
+  <line class="arrow" x1="430" y1="70" x2="670" y2="60" />
+  <line class="arrow" x1="755" y1="100" x2="755" y2="120" />
+
+  <rect class="box" x="670" y="200" width="170" height="60" />
+  <text class="label" x="755" y="235" text-anchor="middle">S3 Backups</text>
+  <line class="arrow" x1="555" y1="170" x2="755" y2="230" />
+  <line class="arrow" x1="755" y1="170" x2="755" y2="200" />
+</svg>
+
+## Docker Compose
+
+```yaml
+version: "3.8"
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=you@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+    ports: ["80:80", "443:443"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: gitea
+      POSTGRES_USER: gitea
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  gitea:
+    image: gitea/gitea:1.22
+    environment:
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=change-me
+    volumes:
+      - ./data/gitea:/data
+    depends_on: [postgres]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea.rule=Host(`git.example.com`)
+      - traefik.http.routers.gitea.entrypoints=websecure
+      - traefik.http.routers.gitea.tls.certresolver=le
+
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_HOST=automation.example.com
+      - N8N_PROTOCOL=https
+      - N8N_PORT=443
+      - WEBHOOK_URL=https://automation.example.com/
+      - EXECUTIONS_MODE=queue
+      - QUEUE_BULL_REDIS_HOST=redis
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=gitea
+      - DB_POSTGRESDB_PASSWORD=change-me
+      - N8N_ENCRYPTION_KEY=please-change
+      - N8N_USER_MANAGEMENT_DISABLED=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+    depends_on: [redis, postgres]
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`automation.example.com`)
+      - traefik.http.routers.n8n.entrypoints=websecure
+      - traefik.http.routers.n8n.tls.certresolver=le
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+```
+
+Initialize Gitea at `https://git.example.com`, create an admin, and set SSH clone URL.
+
+## Single‑Sign‑On (Optional)
+
+Add Authelia/Authentik as OIDC provider and configure both Gitea and n8n for SSO.
+
+## CI with Gitea Actions
+
+Install `act_runner` on the host:
+
+```bash
+curl -L https://dl.gitea.com/act_runner/latest/act_runner_linux_amd64 -o /usr/local/bin/act_runner
+chmod +x /usr/local/bin/act_runner
+act_runner register --instance https://git.example.com --token <runner-token>
+act_runner daemon
+```
+
+Example workflow `.gitea/workflows/ci.yml`:
+
+```yaml
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Build here"
+```
+
+## n8n Workflows with Gitea Webhooks
+
+In Gitea repo → Settings → Webhooks:
+
+- URL: `https://automation.example.com/webhook/gitea`
+- Content type: JSON
+- Events: Push, PRs, Releases
+
+In n8n:
+
+1. Webhook node (path `gitea`, POST)
+2. Switch node on event type → branches to Slack/Discord, issue creation, Docker deploy, etc.
+3. Add credentials (tokens) for Gitea API to post status checks.
+
+Webhook payload shape:
+
+```json
+{
+  "event": "push",
+  "ref": "refs/heads/main",
+  "commits": [ { "id": "...", "added": [], "modified": ["app.js"] } ]
+}
+```
+
+## Backups
+
+- Gitea: built‑in dump (`gitea dump`) nightly + Postgres `pg_dump`.
+- n8n: export workflows + Postgres snapshot; push to S3.
+
+Cron example (host):
+
+```bash
+0 3 * * * docker exec -t gitea gitea dump -c /data/gitea/conf/app.ini -f /data/backups/gitea-$(date +\%F).zip
+0 3 * * * docker exec -t postgres pg_dump -U gitea gitea | zstd > /srv/backups/pg-$(date +\%F).sql.zst
+```
+
+## Hardening
+
+- Traefik middlewares for rate‑limit and security headers.
+- Enforce SSH keys; disable password auth in Gitea.
+- n8n: encryption key set; restrict public API; place behind SSO.
+
+---
+
+This stack keeps all dev automation in your control, integrates tightly, and is easy to back up and restore.
+
+
+## More Details
+
+### Traefik Middlewares (Security & Rate‑limit)
+
+Add labels to services to enable headers and throttling:
+
+```yaml
+labels:
+  - traefik.http.middlewares.sec.headers.stsSeconds=63072000
+  - traefik.http.middlewares.sec.headers.frameDeny=true
+  - traefik.http.middlewares.sec.headers.contentTypeNosniff=true
+  - traefik.http.middlewares.ratelimit.rateLimit.average=50
+  - traefik.http.middlewares.ratelimit.rateLimit.burst=100
+  - traefik.http.routers.gitea.middlewares=sec,ratelimit
+  - traefik.http.routers.n8n.middlewares=sec,ratelimit
+```
+
+### OIDC / SSO Examples
+
+Gitea (`app.ini`):
+
+```ini
+[oauth2_client]
+ENABLE_OPENID_SIGNIN = true
+ENABLE_OPENID_SIGNUP = false
+
+[service]
+DISABLE_REGISTRATION = true
+```
+
+In Gitea UI → Site Admin → Authentication → Add OIDC Provider (Auth URL, Token URL, JWKS URL from Authelia/Authentik).
+
+n8n environment:
+
+```env
+N8N_AUTH_BACKEND=saml
+N8N_SAML_LOGIN_ENABLED=true
+N8N_SAML_METADATA_URL=https://auth.example.com/saml/metadata
+```
+
+### Email / Webhooks
+
+Gitea mailer (`app.ini`):
+
+```ini
+[mailer]
+ENABLED = true
+HOST = smtp.example.com:587
+USER = no-reply@example.com
+PASSWD = app-password
+FROM = "Gitea" <no-reply@example.com>
+```
+
+### Backups & Restore
+
+Backup scripts (host):
+
+```bash
+docker exec -t gitea gitea dump -c /data/gitea/conf/app.ini -f /data/backups/gitea-$(date +%F).zip
+docker exec -t postgres pg_dump -U gitea gitea | zstd > /srv/backups/pg-$(date +%F).sql.zst
+aws s3 cp /srv/backups s3://my-backups/gitea/ --recursive --storage-class STANDARD_IA
+```
+
+Restore (outline):
+
+1) Stop containers. 2) Restore `/data` and Postgres dump. 3) Start containers.
+
+### Monitoring
+
+- Add cAdvisor and node‑exporter, scrape with Prometheus; Grafana dashboards for container CPU/mem, HTTP rates.
+
+### Automation Ideas (n8n)
+
+- On tag push → build Docker image → push to registry → deploy via SSH or webhook to your cluster.
+- Nightly repo backup → tar releases → upload to S3 → send summary to Slack.

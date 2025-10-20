@@ -1,0 +1,66 @@
+---
+title: "TensorFlow vs PyTorch in 2025 — My Take"
+publishedAt: "2025-10-20T09:50:00Z"
+summary: "APIs, ecosystem, deployment, and ergonomics—what to choose for research vs production in 2025."
+images: []
+tag: "ML"
+---
+
+## Prerequisites
+
+- Python 3.10+ with `pip`
+- A recent GPU (optional but recommended) with latest NVIDIA driver + CUDA/cuDNN; or Apple Silicon with Metal backends
+- Virtual environment tool: `venv`/`conda`
+- Installers: `pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121` (or CPU build)
+- TensorFlow: `pip install tensorflow` (or `tensorflow-macos` for Apple Silicon) and `tensorflow-metal` where applicable
+
+## TL;DR
+
+- PyTorch: best dev UX, dominant in research and most production teams (with `torch.compile`, `torch.export`).
+- TensorFlow/Keras: stable on‑device (TF Lite), good for mobile/edge; Keras 3 unifies backends.
+
+## APIs & Training Experience
+
+- PyTorch eager execution + rich debugging; Keras 3 improved ergonomics but Torch still feels more Pythonic.
+- Compilers: `torch.compile` and `torch._inductor` have matured; TF/XLA stable for many graphs but can be finicky.
+
+## Deployment
+
+- Server: Torch + `vllm`/Triton for LLMs and `torchserve`/FastAPI for others.
+- Edge: TF Lite still wins for Android/iOS; ONNX Runtime Mobile is a strong cross‑vendor alternative.
+
+## Minimal Examples
+
+```python
+# PyTorch MLP
+import torch, torch.nn as nn
+
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(nn.Linear(784, 256), nn.ReLU(), nn.Linear(256, 10))
+    def forward(self, x):
+        return self.net(x)
+
+model = MLP()
+opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+```
+
+```python
+# Keras MLP
+import tensorflow as tf
+from tensorflow import keras as K
+
+model = K.Sequential([
+    K.layers.Input((784,)),
+    K.layers.Dense(256, activation='relu'),
+    K.layers.Dense(10)
+])
+model.compile(optimizer='adam', loss=K.losses.SparseCategoricalCrossentropy(from_logits=True))
+```
+
+## Recommendation
+
+- Research/new product: PyTorch.
+- Mobile‑first: TensorFlow + TF Lite.
+- Mixed stack: export to ONNX for portability.

@@ -1,0 +1,76 @@
+---
+title: "Comparing Local LLM Models in 2025"
+publishedAt: "2025-10-20T09:30:00Z"
+summary: "A practical, hardware‑aware look at running LLMs locally: models, quantization, VRAM needs, latency, and use‑cases."
+images: []
+tag: "LLM"
+---
+
+## Prerequisites
+
+- Hardware: from CPU/iGPU laptops to single 8–16 GB GPUs; more VRAM improves quality and context length
+- OS: Linux/macOS/Windows; for CUDA paths install NVIDIA driver + CUDA toolkit (or use containers)
+- Tooling: one or more runtimes — llama.cpp (GGUF), vLLM (CUDA), or TGI; `git`, `curl`
+- Models: access to HF Hub; consider AWQ/GPTQ or GGUF quantizations for your hardware
+- Optional: vector DB (pgvector/Qdrant) for RAG, and a reverse proxy for OpenAI‑compatible serving
+
+## TL;DR
+
+- If you have ≤8 GB VRAM, choose 7B models in Q4_K_M (fast, decent quality).
+- For 12–16 GB VRAM, 13B/14B models in Q5_K_M are the sweet spot.
+- For multi‑GPU (NVLink) or ≥24 GB VRAM, 70B mixtures or 32B dense shine.
+- GGUF + llama.cpp for CPU/low‑VRAM portability; `vllm` for max throughput on CUDA.
+
+## What "Good" Means (Locally)
+
+- Latency: first token (&lt;500ms) and tokens/sec under load.
+- Quality: instruction following, tool use, and code reasoning.
+- Footprint: VRAM/RAM, disk, and power.
+
+## Popular Choices
+
+### 7B Class (Low VRAM)
+- Llama‑3.2‑Instruct 3B/7B — compact, friendly, good for notes and chat.
+- Qwen2.5‑7B‑Instruct — very strong multilingual/code for its size.
+
+### 13B/14B Class (Mid VRAM)
+- Mistral‑Nemo‑12B‑Instruct — robust generalist, good safety.
+- Qwen2.5‑14B‑Instruct — great code and tool use.
+
+### 32B+ (High VRAM)
+- Llama‑3.1‑70B (sharded) — best quality locally if you can distribute or offload.
+- DeepSeek‑Coder‑33B — excels at coding tasks.
+
+## Quantization Cheat Sheet
+
+```
+Q8_0   ~ near‑FP16 quality, high VRAM
+Q5_K_M ~ excellent balance for 7B–14B
+Q4_K_M ~ fastest for laptops/edge, minor quality hit
+Q3_K_M ~ only if absolutely needed; quality drops
+```
+
+## Runtimes
+
+- `llama.cpp` (GGUF): CPU/Apple Silicon champions; good single‑user latency.
+- `vllm`: CUDA kernel fusion + paged attention = high throughput for many users.
+- `text-generation-inference` (TGI): production‑ready REST/gRPC with HF stacks.
+
+## Suggested Setups
+
+- Laptop (16 GB RAM, iGPU): Llama‑3.2‑3B/7B Q4_K_M in llama.cpp.
+- Single 12 GB GPU: Qwen2.5‑14B Q5_K_M in vLLM with tensor parallel = 1.
+- 2× 24 GB GPUs: 70B sharded in vLLM or TGI; enable KV‑cache offload + BF16.
+
+## Tool Use and RAG
+
+- Prefer models fine‑tuned for function calling (OpenAI JSON‑style) or with proven structured outputs.
+- Vector DB: pgvector, Qdrant, or LanceDB; keep chunking conservative (350–600 tokens).
+
+## Benchmarks That Matter
+
+Don’t overfit to academic leaderboards. Test your flows: few‑shot prompting, function calls, and long context with your docs. Measure wall‑clock latency and tokens/sec under concurrent users.
+
+---
+
+If you want, I’ll publish a follow‑up with vLLM vs llama.cpp traces on my GPUs.

@@ -192,6 +192,19 @@ export default function About() {
                 )}
               </Row>
             )}
+
+            {/* Link to Magic UI Globe component docs */}
+            <Row className={styles.blockAlign} paddingTop="8" horizontal="center">
+              <Button
+                href="https://magicui.design/docs/components/globe"
+                prefixIcon="globe"
+                variant="secondary"
+                size="s"
+                weight="default"
+              >
+                Magic UI Globe
+              </Button>
+            </Row>
           </Column>
 
           {about.intro.display && (

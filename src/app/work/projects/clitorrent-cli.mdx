@@ -1,0 +1,49 @@
+---
+title: "CLITorrent — Rust CLI Torrent Client"
+publishedAt: "2025-10-20T10:00:00Z"
+summary: "A terminal torrent client written in Rust, using the BitTorrent protocol for downloads."
+images:
+  - "/images/projects/clitorrent/Screenshot 2025-10-19 174819.png"
+  - "/images/projects/clitorrent/Screenshot 2025-10-19 174752.png"
+---
+
+## Overview
+
+CLITorrent is a fast, lightweight torrent client that runs entirely in the terminal. It focuses on reliability, clear progress feedback, and low resource usage.
+
+## Technologies Used
+
+- Rust
+- BitTorrent protocol
+
+## Media
+
+<img src="/images/projects/clitorrent/Screenshot 2025-10-19 174752.png" alt="Torrent list view"  />
+<img src="/images/projects/clitorrent/Screenshot 2025-10-19 174819.png" alt="Torrent details view"  />
+<img src="/images/projects/clitorrent/Screenshot 2025-10-19 175011.png" alt="Download progress"  />
+
+## Case Study
+
+### Problem & Goals
+- Wanted a fast, scriptable torrent client without GUI overhead.
+- Goals: minimal deps, clear progress, pause/resume, safe defaults.
+
+### Architecture
+- Rust CLI using async runtime; modular layers for protocol, session, and UI.
+- BitTorrent engine wrapper; file I/O with buffered writes and integrity checks.
+
+### Implementation Highlights
+- Resumable sessions via state snapshots (pieces, peers, priorities).
+- TUI-friendly output with throttled updates; JSON mode for scripting.
+- Rate limiter and disk preallocation to avoid fragmentation.
+
+### Challenges
+- Peer choking/unchoking heuristics; tuned for fairness and throughput.
+- Handling partial files on abrupt exits; added atomic checkpoints.
+
+### Outcomes
+- Stable downloads with predictable speeds; low CPU/memory footprint.
+- Easy to embed in scripts for automation.
+
+### Next Steps
+- Magnet link support improvements; add selective file download and TUI.

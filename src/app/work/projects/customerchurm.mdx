@@ -1,0 +1,195 @@
+---
+title: "Bank CustomerChurm - Churn Modeling Pipeline"
+publishedAt: "2025-10-22T00:00:00Z"
+summary: "End-to-end churn model with artifacts, S3 integration, and a Streamlit dashboard for predictions, feature insights, and retention simulations."
+images: []
+link: "https://github.com/Aum-Vyas/CustomerChurm"
+---
+
+## Overview
+
+CustomerChurm is a modular churn modeling project that trains a classifier on tabular customer data, exports reproducible artifacts, and provides an interactive Streamlit dashboard for prediction and simple retention simulations.
+
+- Repository: https://github.com/Aum-Vyas/CustomerChurm
+
+## Technologies Used
+
+- Python, scikit-learn, pandas, numpy
+- Streamlit (interactive dashboard)
+- YAML-configured pipeline and artifacts via `joblib`
+- Optional AWS S3 publishing via `boto3`
+
+## Case Study
+
+### Problem & Goals
+- Predict which customers are likely to churn from a CSV dataset.
+- Provide a reproducible, configurable pipeline with saved artifacts and clear evaluation metrics.
+- Offer a lightweight UI to explore predictions, feature importance, and simulate retention levers.
+
+### Context & Constraints
+- Input is tabular and may vary in column naming, typing, and missingness.
+- Must run locally without managed ML platforms; optional S3 for artifact sync.
+- Keep dependencies minimal and the training loop understandable for quick iteration.
+
+### Architecture
+- Orchestration: `pipeline.py` loads data, builds preprocessing, splits train/val/test, trains model, evaluates, saves artifacts, and optionally uploads to S3.
+- Data prep: `src/data.py` defines a `ColumnTransformer` with numeric median imputation + scaling and categorical most-frequent imputation + one-hot encoding. Target inference supports aliases (e.g., `churn`, `exited`).
+- Modeling: `src/model.py` provides a model factory (`logistic`, `random_forest`, `gradient_boosting`), evaluation (accuracy, precision, recall, ROC-AUC), and feature importance (model-based or permutation fallback).
+- Retention simulation: `src/retention.py` applies numeric adjustments to selected features and measures probability uplift (base vs simulated means, absolute/relative deltas).
+- Artifacts & S3: `src/s3_utils.py` handles uploads; artifacts stored under `artifacts/` with timestamped names.
+- Dashboard: `app.py` (Streamlit) loads the latest local pipeline, runs predictions on uploaded or configured data, displays metrics and feature importance, and lets users simulate numeric adjustments.
+
+### Architecture Diagram (Engineering)
+
+<img src="/images/projects/customerchurm/architecture.svg" alt="CustomerChurm architecture diagram" />
+
+Design notes for engineers:
+- Interfaces are plain functions with typed inputs/outputs; training returns a `TrainedArtifacts` dataclass encapsulating the fitted `Pipeline`, metrics map, and feature-importance `DataFrame`.
+- The scikit-learn `Pipeline` composes preprocessing (`ColumnTransformer`) and the estimator to prevent train/serve skew.
+- Artifact naming is time-versioned to avoid collisions; the dashboard discovers the latest by suffix pattern.
+
+### Preprocessing Flow (Engineering)
+
+<img src="/images/projects/customerchurm/transform-flow.svg" alt="Preprocessing flow: numeric and categorical branches" />
+
+Notes:
+- Numeric: SimpleImputer(strategy="median") → StandardScaler(with_mean=False)
+- Categorical: SimpleImputer(strategy="most_frequent") → OneHotEncoder(dense, handle_unknown="ignore") with `sparse_output` compat fallback
+- Target inference: exact/case-insensitive/aliases to stay resilient to column renames
+- App input alignment: adds missing columns as NaN and reorders to match `feature_names_in_`
+
+### Data & Schema Handling
+- Default CSV: `Bank_Churn.csv` (repo root) with a target column (configurable via `config.yaml`).
+- Target resolution: `infer_target_column()` supports exact/case-insensitive matches and aliases (`churn`, `churned`, `is_churn`, `exited`, `exit`, `label`, `target`). This prevents breakage when datasets rename the label.
+- Preprocessing auto-detects numeric vs categorical columns; missing values are imputed per type.
+- Optional `id_column` in config is reserved for reporting/joins without leaking into features.
+
+```yaml
+# config.yaml (excerpt)
+data:
+  csv_path: Bank_Churn.csv
+  target: Churn
+  id_column: customer_id
+model:
+  type: logistic   # logistic | random_forest | gradient_boosting
+  test_size: 0.2
+  val_size: 0.2
+  random_state: 42
+s3:
+  bucket: ""       # leave empty to skip upload
+  region: us-east-1
+  prefix: churn/artifacts/
+artifacts:
+  local_dir: artifacts
+```
+
+### Implementation Highlights
+- Robust preprocessing compatible across scikit-learn versions (dense OneHotEncoder with `sparse_output` fallback).
+- Safe metric computation for single-class edge cases; ROC-AUC guarded.
+- Feature importance alignment with transformed features; permutation fallback ensures interpretability across models.
+- Reusable, versioned artifacts: `*_pipeline.joblib`, `*_metrics.json`, `*_feature_importance.csv`, plus saved test split for validation.
+- Optional S3 publishing gated by `config.yaml` (bucket empty → skip); small manifest uploaded for quick inspection.
+
+```python
+# src/model.py (excerpt)
+def make_estimator(model_type: str):
+    model_type = (model_type or "").lower()
+    if model_type in {"logistic", "logistic_regression"}:
+        return LogisticRegression(max_iter=1000)
+    if model_type in {"rf", "random_forest"}:
+        return RandomForestClassifier(n_estimators=300, random_state=42)
+    if model_type in {"gb", "gradient_boosting"}:
+        return GradientBoostingClassifier(random_state=42)
+    return LogisticRegression(max_iter=1000)
+```
+
+### Evaluation & Outputs
+Artifacts saved to `artifacts/` after training:
+
+- Trained pipeline: `*_pipeline.joblib`
+- Metrics: `*_metrics.json` (accuracy, precision, recall, ROC-AUC)
+- Feature importance: `*_feature_importance.csv`
+- Test split: `*_X_test.parquet`, `*_y_test.csv`
+- Retention simulation summary: `*_simulation.json`
+
+Example `*_metrics.json` format:
+
+```json
+{
+  "accuracy": 0.0,
+  "precision": 0.0,
+  "recall": 0.0,
+  "roc_auc": 0.0
+}
+```
+
+### Dashboard Walkthrough
+- Upload a CSV (or use the configured CSV path) to preview data and run predictions.
+- View average churn probability, per-row predictions, and top features.
+- Run a simple retention simulation by adjusting a numeric feature to observe probability deltas.
+
+Flow details:
+- Input alignment checks pipeline-required columns and auto-adds missing with `NaN` to avoid shape errors.
+- For models without `predict_proba`, the app normalizes decision scores to [0,1] for comparability.
+- The right panel surfaces latest metrics and top features from the artifacts directory.
+
+### Reproducibility & MLOps
+- Deterministic seeds: configurable `random_state` for splits and tree-based models.
+- Artifact naming: timestamped `<model>_<UTC-ISO>` prefix guarantees uniqueness across runs.
+- Optional S3 sync: uploads pipeline, metrics, feature importance, test splits, and a manifest under `s3://<bucket>/<prefix>/<model-timestamp>/`.
+- Local-first: dashboard discovers the latest local artifacts without network dependencies.
+
+### How to Run
+1) Setup
+
+```bash
+python -m venv .venv
+# Windows: .\.venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2) Configure
+- Edit `config.yaml` to set `data.csv_path`, `data.target`, `model.type`, `artifacts.local_dir`, and S3 fields (optional).
+
+3) Train & Evaluate
+
+```bash
+python pipeline.py
+```
+
+4) Dashboard
+
+```bash
+streamlit run app.py
+```
+
+### Retention Simulation (Method)
+- Base probabilities: apply trained pipeline on validation/input features to compute mean churn probability.
+- Adjustment: add a delta to a chosen numeric column (e.g., `MonthlyCharges -= 5`) and recompute mean.
+- Report: absolute and relative delta across the population; detailed per-row deltas are kept in-memory and summarized.
+
+### Trade-offs & Challenges
+- No hyperparameter tuning yet; defaults are sensible but can be improved with CV and search.
+- Dashboard currently loads only local artifacts; S3 model discovery is stubbed.
+- Probability normalization for non-probabilistic estimators is heuristic.
+
+Additional considerations:
+- Permutation importance can be slow on very wide datasets; current fallback limits repeats and relies on model-based importances when available.
+- One-hot expansion can grow feature space; scaling uses `with_mean=False` to prevent sparse conversion issues.
+
+### Outcomes
+- Clear baseline churn pipeline that is easy to configure and extend.
+- Consistent artifacts for analysis, sharing, and deployment workflows.
+- Practical UI that helps stakeholders understand predictions and experiment with simple interventions.
+
+### Lessons Learned
+- Schema flexibility (target aliases, input alignment) dramatically reduces onboarding friction across new datasets.
+- Packaging preprocessing and model in a single pipeline simplifies deployment and eliminates train/serve skew.
+- Lightweight dashboards encourage non-ML stakeholders to engage with model behavior early.
+
+### Next Steps
+- Add model tuning/calibration (e.g., Grid/Random search, Platt/Isotonic).
+- Implement S3 manifest discovery/loading in the dashboard.
+- Expand simulations to multi-feature, cost-constrained uplift scenarios.
+- Add schema validation and richer EDA in the dashboard.

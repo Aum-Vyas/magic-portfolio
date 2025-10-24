@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600" role="img" aria-label="Preprocessing flow diagram">
+  <defs>
+    <style>
+      .box{fill:#ffffff;stroke:#1f2937;stroke-width:2;rx:10;ry:10}
+      .title{font:600 18px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#111827}
+      .text{font:400 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#374151}
+      .muted{fill:#6b7280}
+      .arrow{stroke:#1f2937;stroke-width:2;marker-end:url(#arrowHead)}
+      .bg{fill:#f9fafb}
+      .cap{font:500 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#6b7280}
+    </style>
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1f2937" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="600"/>
+
+  <!-- Input -->
+  <rect class="box" x="60" y="70" width="340" height="150"/>
+  <text class="title" x="80" y="100">Input (X)</text>
+  <text class="text" x="80" y="130">• Mixed dtypes (num/cat/bool)</text>
+  <text class="text" x="80" y="155">• Missing values allowed</text>
+
+  <!-- ColumnTransformer label and arrow to branches -->
+  <text class="cap" x="430" y="110">ColumnTransformer</text>
+  <line class="arrow" x1="400" y1="150" x2="520" y2="150"/>
+
+  <!-- Numeric branch -->
+  <rect class="box" x="540" y="40" width="400" height="210"/>
+  <text class="title" x="560" y="70">Numeric pipeline</text>
+  <text class="text" x="560" y="105">1) SimpleImputer (median)</text>
+  <text class="text" x="560" y="130">2) StandardScaler (with_mean=false)</text>
+  <text class="cap" x="560" y="160">Selected: X.select_dtypes(["number"])</text>
+
+  <!-- Categorical branch -->
+  <rect class="box" x="540" y="280" width="400" height="250"/>
+  <text class="title" x="560" y="310">Categorical pipeline</text>
+  <text class="text" x="560" y="345">1) SimpleImputer (most_frequent)</text>
+  <text class="text" x="560" y="370">2) OneHotEncoder (dense, ignore unknown)</text>
+  <text class="cap" x="560" y="395">Compat: sparse_output or sparse fallback</text>
+  <text class="cap" x="560" y="420">Selected: X.select_dtypes(["object","category","bool"])</text>
+
+  <!-- Concatenation indication and arrows to estimator -->
+  <line class="arrow" x1="740" y1="250" x2="740" y2="280"/>
+  <text class="cap" x="752" y="268">concat</text>
+  <line class="arrow" x1="940" y1="150" x2="1060" y2="150"/>
+  <line class="arrow" x1="940" y1="405" x2="1060" y2="405"/>
+
+  <!-- Estimator -->
+  <rect class="box" x="1060" y="110" width="300" height="180"/>
+  <text class="title" x="1080" y="140">Estimator</text>
+  <text class="text" x="1080" y="168">• Logistic</text>
+  <text class="text" x="1080" y="192">• RandomForest</text>
+  <text class="text" x="1080" y="216">• GradientBoosting</text>
+  <text class="text" x="1080" y="240">• In sklearn Pipeline</text>
+
+  <!-- Output -->
+  <line class="arrow" x1="1210" y1="290" x2="1210" y2="340"/>
+  <rect class="box" x="1060" y="340" width="300" height="130"/>
+  <text class="title" x="1080" y="372">Output</text>
+  <text class="text" x="1080" y="402">• y_pred, y_proba</text>
+
+  <!-- Footer -->
+  <text class="muted" x="60" y="570">Preprocessing flow | ColumnTransformer branches → concatenation → estimator | Prevents train/serve skew</text>
+</svg>

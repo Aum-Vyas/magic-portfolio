@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-label="CustomerChurm architecture diagram">
+  <defs>
+    <style>
+      .box{fill:#fff;stroke:#1f2937;stroke-width:2;rx:8;ry:8}
+      .title{font:600 18px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#111827}
+      .text{font:400 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#374151}
+      .muted{fill:#6b7280}
+      .arrow{stroke:#1f2937;stroke-width:2;marker-end:url(#arrowHead)}
+      .bg{fill:#f9fafb}
+      .badge{fill:#e5f3ff;stroke:#2563eb;stroke-width:1;rx:6;ry:6}
+      .badgeText{font:600 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; fill:#1e40af}
+    </style>
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1f2937" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720"/>
+
+  <!-- Left: Data & Config -->
+  <rect class="box" x="60" y="80" width="280" height="160"/>
+  <text class="title" x="80" y="110">Data & Config</text>
+  <text class="text" x="80" y="140">• CSV: Bank_Churn.csv</text>
+  <text class="text" x="80" y="165">• config.yaml: data, model, s3, artifacts</text>
+  <text class="text" x="80" y="190">• Optional id_column</text>
+
+  <!-- Center Top: Pipeline Orchestrator -->
+  <rect class="box" x="460" y="40" width="280" height="120"/>
+  <text class="title" x="480" y="70">pipeline.py</text>
+  <text class="text" x="480" y="95">• Orchestrates end-to-end run</text>
+  <text class="text" x="480" y="120">• Saves local artifacts, optional S3</text>
+
+  <!-- Center Middle: Preprocessing -->
+  <rect class="box" x="420" y="200" width="360" height="150"/>
+  <text class="title" x="440" y="230">Preprocessing (src/data.py)</text>
+  <text class="text" x="440" y="255">• ColumnTransformer</text>
+  <text class="text" x="440" y="280">  - Numeric: median → StandardScaler(with_mean=false)</text>
+  <text class="text" x="440" y="305">  - Categorical: most_frequent → OneHotEncoder(dense)</text>
+
+  <!-- Center Bottom: Modeling -->
+  <rect class="box" x="420" y="380" width="360" height="150"/>
+  <text class="title" x="440" y="410">Modeling (src/model.py)</text>
+  <text class="text" x="440" y="435">• Logistic / RandomForest / GradientBoosting</text>
+  <text class="text" x="440" y="460">• Metrics: acc, precision, recall, ROC-AUC</text>
+  <text class="text" x="440" y="485">• Feature importance (model-based or permutation)</text>
+
+  <!-- Right: Artifacts -->
+  <rect class="box" x="860" y="120" width="280" height="180"/>
+  <text class="title" x="880" y="150">Artifacts (artifacts/)</text>
+  <text class="text" x="880" y="175">• *_pipeline.joblib</text>
+  <text class="text" x="880" y="200">• *_metrics.json</text>
+  <text class="text" x="880" y="225">• *_feature_importance.csv</text>
+  <text class="text" x="880" y="250">• *_X_test.parquet, *_y_test.csv</text>
+  <text class="text" x="880" y="275">• *_simulation.json</text>
+
+  <!-- Right Bottom: Streamlit App -->
+  <rect class="box" x="860" y="340" width="280" height="180"/>
+  <text class="title" x="880" y="370">Dashboard (app.py)</text>
+  <text class="text" x="880" y="395">• Upload CSV or use configured data</text>
+  <text class="text" x="880" y="420">• Predict, view metrics & importances</text>
+  <text class="text" x="880" y="445">• Simulate numeric feature adjustments</text>
+
+  <!-- Optional S3 -->
+  <rect class="box" x="860" y="540" width="280" height="120"/>
+  <text class="title" x="880" y="570">S3 (optional)</text>
+  <text class="text" x="880" y="595">• s3://<bucket>/<prefix>/<model-ts>/...</text>
+  <rect class="badge" x="1080" y="548" width="44" height="24"/>
+  <text class="badgeText" x="1090" y="564">opt-in</text>
+
+  <!-- Arrows -->
+  <line class="arrow" x1="340" y1="160" x2="460" y2="100"/>
+  <line class="arrow" x1="600" y1="160" x2="600" y2="200"/>
+  <line class="arrow" x1="600" y1="350" x2="600" y2="380"/>
+  <line class="arrow" x1="780" y1="260" x2="860" y2="210"/>
+  <line class="arrow" x1="780" y1="455" x2="860" y2="420"/>
+  <line class="arrow" x1="1000" y1="300" x2="1000" y2="340"/>
+  <line class="arrow" x1="1000" y1="520" x2="1000" y2="540"/>
+
+  <!-- Footer note -->
+  <text class="muted" x="60" y="690">CustomerChurm | Data → Preprocess → Model → Artifacts → (S3) → Streamlit App</text>
+</svg>
+

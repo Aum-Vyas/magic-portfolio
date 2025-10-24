@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300">
+  <style>
+    .box { fill:#F8FAFC; stroke:#94A3B8; stroke-width:2; }
+    .title { font: 600 14px sans-serif; fill:#0F172A; }
+    .text { font: 12px sans-serif; fill:#334155; }
+    .arrow { stroke:#64748B; stroke-width:2; marker-end:url(#arrow); fill:none; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B" />
+    </marker>
+  </defs>
+  <!-- Stages -->
+  <rect class="box" x="30" y="40" width="170" height="90" rx="8"/>
+  <rect class="box" x="230" y="40" width="200" height="90" rx="8"/>
+  <rect class="box" x="460" y="40" width="180" height="90" rx="8"/>
+  <rect class="box" x="670" y="40" width="180" height="90" rx="8"/>
+
+  <text class="title" x="50" y="65">Load & Split</text>
+  <text class="text" x="50" y="85">stratified train/val/test</text>
+
+  <text class="title" x="250" y="65">Clean & Vectorize</text>
+  <text class="text" x="250" y="85">normalize, remove noise, TF‑IDF</text>
+
+  <text class="title" x="480" y="65">Train</text>
+  <text class="text" x="480" y="85">LogReg / Linear SVM</text>
+
+  <text class="title" x="690" y="65">Evaluate</text>
+  <text class="text" x="690" y="85">accuracy, macro/micro F1</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 200 85 L 230 85"/>
+  <path class="arrow" d="M 430 85 L 460 85"/>
+  <path class="arrow" d="M 640 85 L 670 85"/>
+
+  <!-- Notes -->
+  <text class="text" x="40" y="160">• class weights / resampling for imbalance</text>
+  <text class="text" x="40" y="180">• error analysis guided by confusion matrix</text>
+</svg>
+

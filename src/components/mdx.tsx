@@ -1,5 +1,9 @@
 import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
 import AsciiBeforeAfter from "@/components/work/AsciiBeforeAfter";
+import MedicalInsuranceArchitecture from "@/components/diagrams/MedicalInsuranceArchitecture";
+import MedicalInsurancePipeline from "@/components/diagrams/MedicalInsurancePipeline";
+import MentalHealthArchitecture from "@/components/diagrams/MentalHealthArchitecture";
+import MentalHealthPipeline from "@/components/diagrams/MentalHealthPipeline";
 import React, { ReactNode } from "react";
 import { slugify as transliterate } from "transliteration";
 
@@ -204,6 +208,10 @@ const components = {
   Media,
   SmartLink,
   AsciiBeforeAfter,
+  MedicalInsuranceArchitecture,
+  MedicalInsurancePipeline,
+  MentalHealthArchitecture,
+  MentalHealthPipeline,
 };
 
 type CustomMDXProps = MDXRemoteProps & {

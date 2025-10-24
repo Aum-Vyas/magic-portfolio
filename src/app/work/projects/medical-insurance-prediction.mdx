@@ -1,0 +1,112 @@
+---
+title: "Medical Insurance — Cost Prediction, Pricing, and Analytics"
+publishedAt: "2025-10-24T00:00:00Z"
+summary: "End‑to‑end pipeline that predicts medical insurance charges, compares multiple models, explains drivers (SHAP/PDP), clusters customers, simulates scenarios, assesses fairness, serves an API, and ships a Streamlit dashboard."
+images: []
+link: "https://github.com/Aum-Vyas/Medical-insurance-Prediction"
+---
+
+## Overview
+
+This project predicts individual medical insurance costs from tabular features such as age, sex, BMI, children, smoker, and region. It trains multiple models, selects the best, and provides explainability, clustering, pricing with margin, scenarios, fairness analysis, a FastAPI service, and a Streamlit dashboard.
+
+## Technologies Used
+
+- Python, pandas, numpy
+- scikit-learn (Linear/Ridge, RandomForest; optional GradientBoosting)
+- Optional: XGBoost, PyTorch MLP
+- FastAPI (serving), Streamlit (dashboard)
+- Matplotlib/Seaborn, SHAP (explainability)
+
+## Case Study
+
+### Problem & Goals
+- Predict insurance charges from demographics/lifestyle factors.
+- Compare multiple models and select the best pipeline.
+- Explain predictions (global + local), explore clusters, simulate what‑ifs, and expose an API and dashboard for stakeholders.
+
+### Context & Constraints
+- Tabular dataset `age, sex, bmi, children, smoker, region, charges` (case‑insensitive).
+- Mix of numeric/categorical features; small/medium dataset so dense OHE is acceptable.
+- Optional heavy deps (XGBoost, Torch) are additive; baseline stack remains light.
+
+### Architecture
+- Data loading and normalization of column names.
+- Preprocessing: impute, encode categoricals (OHE), scale (as needed).
+- Model zoo: Linear, Ridge, RandomForest; optional XGBoost and MLP.
+- Model selection by RMSE/MAE/R²; export best full pipeline as `model_best.joblib`.
+- Explainability: SHAP summary (tree models), PDPs for key features.
+- Clustering: KMeans on transformed features with cluster summaries.
+- Pricing: compute premium from predicted cost with configurable margin.
+- Scenarios: what‑if adjustments (BMI change, smoking cessation, children +1).
+- Fairness: residuals/MAE by group (sex, region) with CSV reports.
+- Serving: FastAPI endpoints for health/predict; Streamlit dashboard for exploration.
+
+### Architecture Diagram
+
+<MedicalInsuranceArchitecture />
+
+### Preprocessing & Modeling Flow
+
+<MedicalInsurancePipeline />
+
+Notes:
+- Categorical: OneHotEncoder(handle_unknown="ignore").
+- Numeric: median imputation; optional scaling for linear models.
+- Target: `charges`; evaluate with MAE, RMSE, R².
+
+### Implementation Highlights
+- Unified scikit‑learn `Pipeline` to prevent train/serve skew.
+- Baselines first (Linear/Ridge), then tree‑based (RF, optional XGB) and MLP.
+- SHAP summary for tree models; PDPs for age/BMI/children.
+- KMeans clustering with cluster summaries and pricing joined.
+- Scenario engine and fairness reports written under `artifacts/`.
+
+### Evaluation
+- Metrics table (RMSE/MAE/R²) across models with best selection.
+- Residual plots and per‑group error tables (sex/region fairness).
+- Feature importance/coefficients indicate primary cost drivers (smoker, BMI, age).
+
+### How to Run
+1) Setup
+
+```bash
+python -m venv .venv
+# Windows: .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2) End‑to‑end pipeline
+
+```bash
+python -m insurance.run_all --data your_file.csv --outdir artifacts --margin 0.2 --clusters 4
+```
+
+3) API (FastAPI)
+
+```bash
+uvicorn insurance.api:app --reload --port 8000
+# GET  http://localhost:8000/health
+# POST http://localhost:8000/predict?include_scenarios=true
+```
+
+4) Dashboard (Streamlit)
+
+```bash
+streamlit run insurance/dashboard.py
+```
+
+### Trade-offs & Challenges
+- Linear models are interpretable but can underfit; trees/XGB reduce error but add complexity.
+- Dense OHE is fine for small data; monitor for sparsity/overfitting if scaling up.
+- Optional heavy deps (XGB, Torch) require environment setup; repo pins help.
+
+### Outcomes
+- Competitive best‑model pipeline with explainability, clustering, and pricing.
+- Scenario simulator and fairness views support practical decision‑making.
+
+### Next Steps
+- Add CV/hyperparameter search and calibration.
+- Expand scenario engine (multi‑feature, cost‑constrained).
+- Add CI for API and dashboard smoke tests.

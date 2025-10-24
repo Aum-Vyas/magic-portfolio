@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
+  <style>
+    .box { fill:#F8FAFC; stroke:#94A3B8; stroke-width:2; }
+    .title { font: 600 14px sans-serif; fill:#0F172A; }
+    .text { font: 12px sans-serif; fill:#334155; }
+    .arrow { stroke:#64748B; stroke-width:2; marker-end:url(#arrow); fill:none; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B" />
+    </marker>
+  </defs>
+  <!-- Stages -->
+  <rect class="box" x="30" y="40" width="160" height="80" rx="8"/>
+  <rect class="box" x="220" y="40" width="190" height="80" rx="8"/>
+  <rect class="box" x="440" y="40" width="170" height="80" rx="8"/>
+  <rect class="box" x="640" y="40" width="170" height="80" rx="8"/>
+
+  <text class="title" x="50" y="65">Load & Split</text>
+  <text class="text" x="50" y="85">train/val/test (stratify if needed)</text>
+
+  <text class="title" x="240" y="65">Transform</text>
+  <text class="text" x="240" y="85">impute → encode → scale</text>
+
+  <text class="title" x="460" y="65">Train</text>
+  <text class="text" x="460" y="85">fit estimator, save pipeline</text>
+
+  <text class="title" x="660" y="65">Evaluate</text>
+  <text class="text" x="660" y="85">MAE, RMSE, R², residuals</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 190 80 L 220 80"/>
+  <path class="arrow" d="M 410 80 L 440 80"/>
+  <path class="arrow" d="M 610 80 L 640 80"/>
+</svg>
+

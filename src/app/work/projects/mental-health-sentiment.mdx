@@ -1,0 +1,121 @@
+---
+title: "Mental Health — Condition Classifier"
+publishedAt: "2025-10-24T00:00:00Z"
+summary: "Predicts mental‑health condition labels from text with strong TF‑IDF baselines, an optional DistilBERT model, clear metrics/plots, a Streamlit UI, and a FastAPI service."
+images: []
+link: "https://github.com/Aum-Vyas/Mental-Health-Sentiment"
+---
+
+## Overview
+
+This project classifies short mental‑health related texts into condition labels (Anxiety, Depression, Bipolar, OCD, PTSD, None). It includes robust preprocessing, reproducible splits, TF‑IDF baselines (LogReg/LinearSVC), an optional DistilBERT model, evaluation with metrics/plots, a Streamlit dashboard, and a FastAPI inference API.
+
+## Technologies Used
+
+- Python, pandas, numpy
+- scikit-learn (TF‑IDF, LogisticRegression, LinearSVC)
+- Transformers (DistilBERT), Accelerate, Datasets, PyTorch
+- Streamlit (dashboard), FastAPI + Uvicorn (serving)
+
+## Case Study
+
+### Problem & Goals
+- Predict mental‑health condition labels from short user text.
+- Establish strong, fast TF‑IDF baselines; optionally train a transformer for higher accuracy.
+- Provide transparent metrics and artifacts for comparison and deployment.
+
+### Context & Constraints
+- Input CSV: `Combined Data.csv` with columns `text`, `label`.
+- Multi‑class labels: Anxiety, Depression, Bipolar, OCD, PTSD, None.
+- Potential class imbalance; prioritize reproducible, stratified splits.
+
+### Architecture
+- Preprocess: clean text (normalize case, strip URLs/mentions/hashtags; optional lemmatization) and write `data/clean.csv`.
+- Baselines: TF‑IDF vectorizer + Logistic Regression (probabilities) and Linear SVM.
+- Transformer: DistilBERT fine‑tuning with compatible pinned versions.
+- Evaluation: accuracy, macro/micro F1, confusion matrix and PR curves.
+- Serving/UI: FastAPI endpoints for inference; Streamlit dashboard for exploration.
+
+### Architecture Diagram
+
+<MentalHealthArchitecture />
+
+### NLP Pipeline Flow
+
+<MentalHealthPipeline />
+
+Notes:
+- Stratified train/val/test split maintained across experiments via a `split` column.
+- Class weights or resampling can mitigate imbalance.
+- LogReg baseline provides calibrated probabilities for APIs.
+
+### Implementation Highlights
+- Clean TF‑IDF baseline with Logistic Regression often performs strongly on short text.
+- LinearSVC added for comparison; DistilBERT optional for higher accuracy.
+- Consistent metrics and plots saved under `artifacts/` (confusion matrices, PR curves).
+
+### Evaluation
+- Report accuracy and macro/micro F1; inspect confusion to surface ambiguous classes.
+- Error analysis uses representative false positives/negatives to guide iteration.
+
+### How to Run
+1) Setup
+
+```bash
+python -m venv .venv
+# Windows: .\.venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -U pip
+pip install -r requirements.txt
+```
+
+2) Preprocess
+
+```bash
+python -m src.preprocess --in "data/Combined Data.csv" --out data/clean.csv
+```
+
+3) Train baselines
+
+```bash
+python -m src.train_sklearn --in data/clean.csv --out artifacts/
+```
+
+4) Train transformer (optional)
+
+```bash
+python -m src.train_transformer --in data/clean.csv --out artifacts/
+```
+
+5) Evaluate and plot
+
+```bash
+python -m src.evaluate --in data/clean.csv --artifacts artifacts/ --out artifacts/
+```
+
+6) Run UI and API
+
+```bash
+streamlit run app/streamlit_app.py
+uvicorn app.api:app --host 0.0.0.0 --port 8000
+```
+
+Example cURL:
+
+```bash
+curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" \
+     -d '{"text":"I feel constant worry about everything","model":"DistilBERT","top_k":3}'
+```
+
+### Trade-offs & Challenges
+- Classical models are lightweight and fast but may miss nuanced context.
+- Transformer encoders improve accuracy but add latency and resource cost.
+
+### Outcomes
+- Solid multi‑class baseline that is fast, reproducible, and easy to deploy.
+- Clear guidance for when to move up to transformer models.
+
+### Next Steps
+- Add calibration and threshold tuning for class‑specific precision/recall targets.
+- Experiment with smaller transformer backbones and distillation.
+- Improve robustness with augmentation and active learning.
